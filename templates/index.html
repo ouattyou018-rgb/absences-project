@@ -1,0 +1,265 @@
+﻿{% extends "base.html" %}
+{% block page_title %}Tableau de bord{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('absence_nouveau') }}" class="btn btn-primary">+ Nouvelle absence</a>
+{% endblock %}
+{% block content %}
+
+{% if alertes %}
+<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;">
+  {% for alerte in alertes %}
+  <div class="alerte-banner alerte-{{ alerte.type }}">
+    <span>{{ alerte.icon }}</span>
+    <span>{{ alerte.message }}</span>
+    <button onclick="this.parentElement.style.display='none'" style="margin-left:auto; background:none; border:none; font-size:1.2rem; cursor:pointer; color:inherit; opacity:0.6;">×</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="page-header">
+  <h1>Vue d ensemble</h1>
+  <p>Suivi en temps reel de l absenteisme — Annee 2024-2025</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Total eleves</span><div class="stat-icon blue">👥</div></div>
+    <div class="stat-value">{{ total_stats.total_eleves if total_stats else 0 }}</div>
+    <div class="stat-trend">Tous niveaux</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Total absences</span><div class="stat-icon red">📋</div></div>
+    <div class="stat-value">{{ total_stats.total_absences if total_stats else 0 }}</div>
+    <div class="stat-trend trend-up">Cette annee</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Moy. par eleve</span><div class="stat-icon amber">📊</div></div>
+    <div class="stat-value">{{ total_stats.taux_global if total_stats else 0 }}</div>
+    <div class="stat-trend {{ 'trend-up' if total_stats and total_stats.taux_global > 3 else 'trend-down' }}">
+      {{ 'Taux eleve' if total_stats and total_stats.taux_global > 3 else 'Taux normal' }}
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Eleves a risque</span><div class="stat-icon red">🚨</div></div>
+    <div class="stat-value">{{ a_risque | length }}</div>
+    <div class="stat-trend trend-up">Plus 3 abs/mois</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Justifiees</span><div class="stat-icon green">✅</div></div>
+    <div class="stat-value">{{ justif.justifiees if justif and justif.justifiees else 0 }}</div>
+    <div class="stat-trend trend-down">Avec justificatif</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-header"><span class="stat-label">Non justifiees</span><div class="stat-icon red">❌</div></div>
+    <div class="stat-value">{{ justif.non_justifiees if justif and justif.non_justifiees else 0 }}</div>
+    <div class="stat-trend trend-up">Sans justificatif</div>
+  </div>
+</div>
+
+<div class="charts-grid">
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Evolution mensuelle</div><div class="card-subtitle">Justifiees vs Non justifiees par mois</div></div>
+      <span class="badge badge-info">Mensuel</span>
+    </div>
+    <canvas id="chartMensuel" height="90"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Repartition globale</div><div class="card-subtitle">Justifiees vs Non justifiees</div></div>
+    </div>
+    <canvas id="chartJustif" height="180"></canvas>
+  </div>
+</div>
+
+<div class="charts-grid">
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Absences par jour de la semaine</div><div class="card-subtitle">Quel jour les eleves sont-ils le plus absents ?</div></div>
+      <span class="badge badge-warning">Analyse</span>
+    </div>
+    <canvas id="chartJour" height="90"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Comparaison par classe</div><div class="card-subtitle">Justifiees vs Non justifiees</div></div>
+    </div>
+    <canvas id="chartClasse" height="180"></canvas>
+  </div>
+</div>
+
+<div class="charts-grid">
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Tendance hebdomadaire</div><div class="card-subtitle">Nombre d absences par semaine</div></div>
+    </div>
+    <canvas id="chartTendance" height="100"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Top 5 eleves les plus absents</div><div class="card-subtitle">Classement general de l annee</div></div>
+      <span class="badge badge-danger">Classement</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Eleve</th><th>Classe</th><th>Total</th><th>Non just.</th></tr></thead>
+      <tbody>
+        {% for i, e in enumerate(top_absents) %}
+        <tr>
+          <td><span class="rank-badge {{ 'rank-1' if i==0 else 'rank-2' if i==1 else 'rank-3' if i==2 else '' }}">{{ i+1 }}</span></td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="avatar" style="width:28px;height:28px;font-size:0.7rem;">{{ e.eleve[0] }}</div>
+              <strong>{{ e.eleve }}</strong>
+            </div>
+          </td>
+          <td><span class="badge badge-neutral">{{ e.nom_classe }}</span></td>
+          <td><strong style="color:#d72c0d;">{{ e.total }}</strong></td>
+          <td>
+            <div class="progress-wrap">
+              <div class="progress-track"><div class="progress-fill danger" style="width:{{ [e.non_justifiees * 15, 100] | min }}%"></div></div>
+              <span style="font-size:0.8rem;">{{ e.non_justifiees }}</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="table-wrapper">
+  <div class="table-header">
+    <div><div class="table-header-title">Analyse detaillee par classe</div><div style="font-size:0.8rem;color:#6d7175;">Taux d absenteisme et repartition</div></div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Classe</th><th>Eleves</th><th>Total abs.</th><th>Justifiees</th><th>Non just.</th><th>Moy/eleve</th><th>Risque</th></tr>
+    </thead>
+    <tbody>
+      {% for c in par_classe %}
+      <tr>
+        <td><strong>{{ c.nom_classe }}</strong></td>
+        <td>{{ c.nb_eleves }}</td>
+        <td><strong>{{ c.total_absences }}</strong></td>
+        <td><span style="color:#007a5a; font-weight:600;">{{ c.justifiees or 0 }}</span></td>
+        <td><span style="color:#d72c0d; font-weight:600;">{{ c.non_justifiees or 0 }}</span></td>
+        <td>
+          <div class="progress-wrap">
+            <div class="progress-track"><div class="progress-fill {{ 'danger' if c.moy > 3 else '' }}" style="width:{{ [c.moy * 15, 100] | min }}%"></div></div>
+            <strong>{{ c.moy }}</strong>
+          </div>
+        </td>
+        <td>
+          {% if c.moy > 5 %}<span class="badge badge-danger">Critique</span>
+          {% elif c.moy > 3 %}<span class="badge badge-warning">Eleve</span>
+          {% else %}<span class="badge badge-success">Normal</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="table-wrapper">
+  <div class="table-header">
+    <div><div class="table-header-title">Eleves a risque</div><div style="font-size:0.8rem;color:#6d7175;">Plus de 3 absences dans un meme mois</div></div>
+    <span class="badge badge-danger">{{ a_risque | length }} eleve(s)</span>
+  </div>
+  {% if a_risque %}
+  <table>
+    <thead><tr><th>Eleve</th><th>Classe</th><th>Mois</th><th>Absences</th><th>Niveau</th></tr></thead>
+    <tbody>
+      {% for r in a_risque %}
+      <tr>
+        <td><div style="display:flex;align-items:center;gap:10px;"><div class="avatar">{{ r.eleve[0] }}</div><strong>{{ r.eleve }}</strong></div></td>
+        <td><span class="badge badge-neutral">{{ r.nom_classe }}</span></td>
+        <td>{{ r.mois }}</td>
+        <td><strong style="color:#d72c0d;font-size:1.1rem;">{{ r.nb }}</strong></td>
+        <td>
+          <div class="progress-wrap">
+            <div class="progress-track"><div class="progress-fill danger" style="width:{{ [r.nb * 14, 100] | min }}%"></div></div>
+            <span class="badge {{ 'badge-danger' if r.nb > 6 else 'badge-warning' }}">
+              {{ 'Critique' if r.nb > 6 else 'Eleve' if r.nb > 4 else 'Modere' }}
+            </span>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><div class="empty-icon">✅</div><p>Aucun eleve a risque ce mois-ci.</p></div>
+  {% endif %}
+</div>
+
+<script>
+Chart.defaults.color = '#6d7175';
+Chart.defaults.borderColor = '#e1e3e5';
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+Chart.defaults.font.size = 11;
+
+const moisLabels  = {{ par_mois | map(attribute='mois') | list | tojson }};
+const moisJust    = {{ par_mois | map(attribute='justifiees') | list | tojson }};
+const moisNonJ    = {{ par_mois | map(attribute='non_justifiees') | list | tojson }};
+const jourLabels  = {{ par_jour | map(attribute='jour') | list | tojson }};
+const jourNb      = {{ par_jour | map(attribute='nb') | list | tojson }};
+const classeLabels= {{ par_classe | map(attribute='nom_classe') | list | tojson }};
+const classeJust  = {{ par_classe | map(attribute='justifiees') | list | tojson }};
+const classeNonJ  = {{ par_classe | map(attribute='non_justifiees') | list | tojson }};
+const semaines    = {{ tendance | map(attribute='semaine') | list | tojson }};
+const nbAbs       = {{ tendance | map(attribute='nb') | list | tojson }};
+const justifiees  = {{ justif.justifiees if justif and justif.justifiees else 0 }};
+const nonJust     = {{ justif.non_justifiees if justif and justif.non_justifiees else 0 }};
+
+new Chart(document.getElementById('chartMensuel'), {
+  type: 'bar',
+  data: { labels: moisLabels, datasets: [
+    { label: 'Justifiees', data: moisJust, backgroundColor: '#008060', borderRadius: 4 },
+    { label: 'Non justifiees', data: moisNonJ, backgroundColor: '#d72c0d', borderRadius: 4 }
+  ]},
+  options: { plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14 }}},
+    scales: { x: { grid: { display: false }}, y: { beginAtZero: true }}}
+});
+
+new Chart(document.getElementById('chartJustif'), {
+  type: 'doughnut',
+  data: { labels: ['Justifiees','Non justifiees'],
+    datasets: [{ data: [justifiees, nonJust], backgroundColor: ['#008060','#d72c0d'], borderWidth: 0, hoverOffset: 6 }]},
+  options: { cutout: '68%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14 }}}}
+});
+
+new Chart(document.getElementById('chartJour'), {
+  type: 'bar',
+  data: { labels: jourLabels, datasets: [{
+    label: 'Absences', data: jourNb,
+    backgroundColor: jourNb.map(v => v === Math.max(...jourNb) ? '#d72c0d' : '#005bd3'),
+    borderRadius: 6
+  }]},
+  options: { plugins: { legend: { display: false }},
+    scales: { y: { beginAtZero: true }, x: { grid: { display: false }}}}
+});
+
+new Chart(document.getElementById('chartClasse'), {
+  type: 'bar',
+  data: { labels: classeLabels, datasets: [
+    { label: 'Justifiees', data: classeJust, backgroundColor: '#008060', borderRadius: 4 },
+    { label: 'Non justifiees', data: classeNonJ, backgroundColor: '#d72c0d', borderRadius: 4 }
+  ]},
+  options: { plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14 }}},
+    scales: { x: { grid: { display: false }}, y: { beginAtZero: true }}}
+});
+
+new Chart(document.getElementById('chartTendance'), {
+  type: 'line',
+  data: { labels: semaines, datasets: [{
+    label: 'Absences', data: nbAbs,
+    borderColor: '#008060', backgroundColor: 'rgba(0,128,96,0.08)',
+    tension: 0.4, fill: true,
+    pointBackgroundColor: '#008060', pointRadius: 4, pointHoverRadius: 6
+  }]},
+  options: { plugins: { legend: { display: false }},
+    scales: { y: { beginAtZero: true }, x: { grid: { display: false }}}}
+});
+</script>
+{% endblock %}

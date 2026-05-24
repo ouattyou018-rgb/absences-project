@@ -1,0 +1,6 @@
+﻿flask
+pg8000
+bcrypt
+numpy
+scikit-learn
+gunicorn

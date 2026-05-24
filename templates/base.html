@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AbsenceTrack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📊</div>
+      <div>
+        <div class="brand-name">AbsenceTrack</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="{{ url_for('index') }}" class="nav-item {{ 'active' if request.endpoint == 'index' }}">
+        <span class="nav-icon">🏠</span> Tableau de bord
+      </a>
+      <div class="nav-section-label">Gestion scolaire</div>
+      <a href="{{ url_for('classes_liste') }}" class="nav-item {{ 'active' if 'classe' in request.endpoint }}">
+        <span class="nav-icon">📚</span> Classes
+      </a>
+      <a href="{{ url_for('eleves_liste') }}" class="nav-item {{ 'active' if 'eleve' in request.endpoint }}">
+        <span class="nav-icon">👥</span> Eleves
+      </a>
+      <a href="{{ url_for('absences_liste') }}" class="nav-item {{ 'active' if 'absence' in request.endpoint }}">
+        <span class="nav-icon">📋</span> Absences
+      </a>
+      <div class="nav-section-label">Machine Learning</div>
+      <a href="{{ url_for('predictions_page') }}" class="nav-item {{ 'active' if request.endpoint == 'predictions_page' }}">
+        <span class="nav-icon">🔮</span> Predictions ML
+      </a>
+      <div class="nav-section-label">Administration</div>
+      <a href="{{ url_for('admin_panel') }}" class="nav-item {{ 'active' if request.endpoint == 'admin_panel' }}">
+        <span class="nav-icon">🔐</span> Panneau Admin
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-info">
+        <div class="admin-avatar">{{ session.get('admin_nom', 'A')[0].upper() }}</div>
+        <div>
+          <div class="admin-name">{{ session.get('admin_nom', 'Utilisateur') }}</div>
+          <div class="admin-email">{{ session.get('admin_email', '') }}</div>
+        </div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-btn">🚪 Se deconnecter</a>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-title">{% block page_title %}AbsenceTrack{% endblock %}</div>
+      <div class="topbar-actions">{% block topbar_actions %}{% endblock %}</div>
+    </div>
+    <div class="content-area">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+</body>
+</html>

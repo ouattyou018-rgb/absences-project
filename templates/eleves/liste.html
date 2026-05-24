@@ -1,0 +1,44 @@
+﻿{% extends "base.html" %}
+{% block page_title %}Eleves{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('eleve_nouveau') }}" class="btn btn-primary">+ Nouvel eleve</a>
+{% endblock %}
+{% block content %}
+<div class="table-wrapper">
+  <div class="table-header">
+    <div class="table-header-title">Tous les eleves</div>
+  </div>
+  <table>
+    <thead><tr><th>Eleve</th><th>Classe</th><th>Absences</th><th>Statut</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for e in eleves %}
+      <tr>
+        <td>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="avatar">{{ e.nom[0] }}</div>
+            <div>
+              <div style="font-weight:600;">{{ e.nom }} {{ e.prenom }}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="badge badge-neutral">{{ e.nom_classe }}</span></td>
+        <td><strong>{{ e.total_absences }}</strong></td>
+        <td>
+          {% if e.total_absences > 3 %}
+            <span class="badge badge-danger">A risque</span>
+          {% else %}
+            <span class="badge badge-success">Normal</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('eleve_modifier', id_eleve=e.id_eleve) }}" class="btn btn-secondary btn-sm">Modifier</a>
+          <form method="POST" action="{{ url_for('eleve_supprimer', id_eleve=e.id_eleve) }}" style="display:inline" onsubmit="return confirm('Supprimer cet eleve ?')">
+            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

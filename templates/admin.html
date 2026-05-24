@@ -1,0 +1,51 @@
+﻿{% extends "base.html" %}
+{% block page_title %}Panneau Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Panneau d administration</h1>
+  <p>Comptes autorises a acceder a AbsenceTrack</p>
+</div>
+
+<div class="table-wrapper">
+  <div class="table-header">
+    <div>
+      <div class="table-header-title">🔐 Comptes autorises</div>
+      <div style="font-size:0.8rem; color:var(--text2);">Seuls ces comptes peuvent se connecter</div>
+    </div>
+    <span class="badge badge-purple">{{ admins | length }} compte(s)</span>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Nom</th><th>Email</th><th>Date creation</th><th>Statut</th></tr>
+    </thead>
+    <tbody>
+      {% for a in admins %}
+      <tr>
+        <td>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="avatar">{{ a.nom[0] }}</div>
+            <div>
+              <div style="font-weight:600;">{{ a.nom }}</div>
+              {% if a.email == session.get('admin_email') %}
+                <div style="font-size:0.72rem; color:var(--accent2);">Connecte actuellement</div>
+              {% endif %}
+            </div>
+          </div>
+        </td>
+        <td style="color:var(--text2);">{{ a.email }}</td>
+        <td style="color:var(--text2); font-size:0.82rem;">
+          {{ a.date_creation.strftime('%d/%m/%Y a %H:%M') if a.date_creation else 'N/A' }}
+        </td>
+        <td>
+          {% if a.actif %}
+            <span class="badge badge-success">✅ Actif</span>
+          {% else %}
+            <span class="badge badge-danger">❌ Inactif</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

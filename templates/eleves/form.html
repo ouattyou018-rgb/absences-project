@@ -1,0 +1,23 @@
+﻿{% extends "base.html" %}
+{% block page_title %}{{ "Modifier" if eleve else "Nouvel" }} eleve{% endblock %}
+{% block content %}
+<div class="form-card">
+  <h2 style="margin-bottom:20px; font-size:1.1rem;">{{ "Modifier l eleve" if eleve else "Ajouter un eleve" }}</h2>
+  <form method="POST">
+    <label>Nom<input type="text" name="nom" required value="{{ eleve.nom if eleve else '' }}"></label>
+    <label>Prenom<input type="text" name="prenom" required value="{{ eleve.prenom if eleve else '' }}"></label>
+    <label>Date de naissance<input type="date" name="date_naissance" value="{{ eleve.date_naissance if eleve else '' }}"></label>
+    <label>Classe
+      <select name="id_classe" required>
+        {% for c in classes %}
+        <option value="{{ c.id_classe }}" {{ 'selected' if eleve and eleve.id_classe == c.id_classe }}>{{ c.nom_classe }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <a href="{{ url_for('eleves_liste') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

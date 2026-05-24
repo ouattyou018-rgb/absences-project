@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AbsenceTrack - Mot de passe oublie</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:#0a0a0f;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+    .bg-glow{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(251,191,36,0.1) 0%,transparent 70%);top:-50px;right:-50px;pointer-events:none;}
+    .wrapper{display:flex;align-items:center;justify-content:center;min-height:100vh;width:100%;padding:24px;}
+    .box{background:rgba(18,18,26,0.9);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:40px;width:100%;max-width:420px;backdrop-filter:blur(20px);position:relative;z-index:1;}
+    .box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#fbbf24,transparent);border-radius:20px 20px 0 0;}
+    .logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+    .logo-icon{width:42px;height:42px;background:linear-gradient(135deg,#6c63ff,#a78bfa);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+    .logo-text{font-size:1.1rem;font-weight:700;color:#f0f0ff;}
+    .icon-big{font-size:3rem;margin-bottom:16px;display:block;}
+    h1{font-size:1.4rem;font-weight:800;color:#f0f0ff;letter-spacing:-0.5px;margin-bottom:4px;}
+    .subtitle{font-size:0.875rem;color:#8888aa;margin-bottom:28px;}
+    .alert{padding:11px 14px;border-radius:10px;font-size:0.85rem;margin-bottom:16px;}
+    .alert-danger{background:rgba(255,77,109,0.1);color:#ff4d6d;border:1px solid rgba(255,77,109,0.25);}
+    .field{margin-bottom:18px;}
+    .field label{display:block;font-size:0.8rem;font-weight:500;color:#8888aa;margin-bottom:7px;}
+    .field input{width:100%;padding:11px 14px;background:rgba(26,26,40,0.8);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#f0f0ff;font-size:0.9rem;outline:none;transition:all 0.2s;font-family:'Inter',sans-serif;}
+    .field input:focus{border-color:#fbbf24;box-shadow:0 0 0 3px rgba(251,191,36,0.15);}
+    .btn{width:100%;padding:12px;background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#1a1a1a;border:none;border-radius:10px;font-size:0.95rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif;}
+    .btn:hover{box-shadow:0 0 24px rgba(251,191,36,0.3);transform:translateY(-1px);}
+    .back-link{display:block;text-align:center;margin-top:18px;font-size:0.85rem;color:#8888aa;text-decoration:none;transition:color 0.2s;}
+    .back-link:hover{color:#a78bfa;}
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="wrapper">
+    <div class="box">
+      <div class="logo">
+        <div class="logo-icon">📊</div>
+        <div><div class="logo-text">AbsenceTrack</div></div>
+      </div>
+      <span class="icon-big">🔐</span>
+      <h1>Mot de passe oublie</h1>
+      <p class="subtitle">Entrez votre email pour reinitialiser votre mot de passe</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="POST">
+        <div class="field">
+          <label>Adresse email de votre compte</label>
+          <input type="email" name="email" placeholder="votre@email.com" required>
+        </div>
+        <button type="submit" class="btn">Continuer →</button>
+      </form>
+      <a href="{{ url_for('login') }}" class="back-link">← Retour a la connexion</a>
+    </div>
+  </div>
+</body>
+</html>

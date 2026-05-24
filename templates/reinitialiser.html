@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AbsenceTrack - Nouveau mot de passe</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:#0a0a0f;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+    .bg-glow{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(16,217,160,0.1) 0%,transparent 70%);top:-50px;left:-50px;pointer-events:none;}
+    .wrapper{display:flex;align-items:center;justify-content:center;min-height:100vh;width:100%;padding:24px;}
+    .box{background:rgba(18,18,26,0.9);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:40px;width:100%;max-width:420px;backdrop-filter:blur(20px);position:relative;z-index:1;}
+    .box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#10d9a0,transparent);border-radius:20px 20px 0 0;}
+    .logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+    .logo-icon{width:42px;height:42px;background:linear-gradient(135deg,#6c63ff,#a78bfa);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+    .logo-text{font-size:1.1rem;font-weight:700;color:#f0f0ff;}
+    .icon-big{font-size:3rem;margin-bottom:16px;display:block;}
+    h1{font-size:1.4rem;font-weight:800;color:#f0f0ff;letter-spacing:-0.5px;margin-bottom:4px;}
+    .subtitle{font-size:0.875rem;color:#8888aa;margin-bottom:16px;}
+    .user-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(108,99,255,0.12);color:#a78bfa;padding:6px 14px;border-radius:20px;font-size:0.82rem;font-weight:600;border:1px solid rgba(108,99,255,0.2);margin-bottom:24px;}
+    .alert{padding:11px 14px;border-radius:10px;font-size:0.85rem;margin-bottom:16px;}
+    .alert-danger{background:rgba(255,77,109,0.1);color:#ff4d6d;border:1px solid rgba(255,77,109,0.25);}
+    .field{margin-bottom:16px;}
+    .field label{display:block;font-size:0.8rem;font-weight:500;color:#8888aa;margin-bottom:7px;}
+    .field input{width:100%;padding:11px 14px;background:rgba(26,26,40,0.8);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#f0f0ff;font-size:0.9rem;outline:none;transition:all 0.2s;font-family:'Inter',sans-serif;}
+    .field input:focus{border-color:#10d9a0;box-shadow:0 0 0 3px rgba(16,217,160,0.15);}
+    .hint{font-size:0.72rem;color:#8888aa;margin-top:5px;}
+    .btn{width:100%;padding:12px;background:linear-gradient(135deg,#10d9a0,#34d399);color:#0a0a0f;border:none;border-radius:10px;font-size:0.95rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif;margin-top:6px;}
+    .btn:hover{box-shadow:0 0 24px rgba(16,217,160,0.3);transform:translateY(-1px);}
+    .back-link{display:block;text-align:center;margin-top:18px;font-size:0.85rem;color:#8888aa;text-decoration:none;transition:color 0.2s;}
+    .back-link:hover{color:#a78bfa;}
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="wrapper">
+    <div class="box">
+      <div class="logo">
+        <div class="logo-icon">📊</div>
+        <div><div class="logo-text">AbsenceTrack</div></div>
+      </div>
+      <span class="icon-big">🔑</span>
+      <h1>Nouveau mot de passe</h1>
+      <p class="subtitle">Compte identifie :</p>
+      <div class="user-tag">👤 {{ nom }} · {{ email }}</div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="POST">
+        <div class="field">
+          <label>Nouveau mot de passe</label>
+          <input type="password" name="nouveau_mdp" placeholder="••••••••" required>
+          <p class="hint">Au moins 6 caracteres</p>
+        </div>
+        <div class="field">
+          <label>Confirmer le mot de passe</label>
+          <input type="password" name="confirmer" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn">✓ Enregistrer le nouveau mot de passe</button>
+      </form>
+      <a href="{{ url_for('login') }}" class="back-link">← Retour a la connexion</a>
+    </div>
+  </div>
+</body>
+</html>

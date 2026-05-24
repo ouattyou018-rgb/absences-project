@@ -1,0 +1,43 @@
+﻿{% extends "base.html" %}
+{% block page_title %}Absences{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('absence_nouveau') }}" class="btn btn-primary">+ Nouvelle absence</a>
+{% endblock %}
+{% block content %}
+<div class="table-wrapper">
+  <div class="table-header">
+    <div class="table-header-title">Toutes les absences</div>
+  </div>
+  <table>
+    <thead><tr><th>Eleve</th><th>Classe</th><th>Date</th><th>Motif</th><th>Statut</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for a in absences %}
+      <tr>
+        <td>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="avatar">{{ a.eleve[0] }}</div>
+            <strong>{{ a.eleve }}</strong>
+          </div>
+        </td>
+        <td><span class="badge badge-neutral">{{ a.nom_classe }}</span></td>
+        <td>{{ a.date_absence }}</td>
+        <td>{{ a.motif or '—' }}</td>
+        <td>
+          {% if a.justifiee %}
+            <span class="badge badge-success">Justifiee</span>
+          {% else %}
+            <span class="badge badge-danger">Non justifiee</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('absence_modifier', id_absence=a.id_absence) }}" class="btn btn-secondary btn-sm">Modifier</a>
+          <form method="POST" action="{{ url_for('absence_supprimer', id_absence=a.id_absence) }}" style="display:inline" onsubmit="return confirm('Supprimer cette absence ?')">
+            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

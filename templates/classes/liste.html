@@ -1,0 +1,52 @@
+﻿{% extends "base.html" %}
+{% block page_title %}Classes{% endblock %}
+{% block topbar_actions %}
+  {% if session.get('is_admin') %}
+  <a href="{{ url_for('classe_nouveau') }}" class="btn btn-primary">+ Nouvelle classe</a>
+  {% endif %}
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Classes</h1>
+  <p>
+    {% if session.get('is_admin') %}
+      Vous pouvez creer, modifier et supprimer des classes.
+    {% else %}
+      <span style="color:var(--amber);">⚠️ Consultation uniquement — la modification des classes est reservee aux administrateurs.</span>
+    {% endif %}
+  </p>
+</div>
+<div class="table-wrapper">
+  <div class="table-header">
+    <div class="table-header-title">Toutes les classes</div>
+    {% if not session.get('is_admin') %}
+    <span class="badge badge-warning">Lecture seule</span>
+    {% endif %}
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Classe</th><th>Niveau</th><th>Annee</th>
+        {% if session.get('is_admin') %}<th>Actions</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in classes %}
+      <tr>
+        <td><strong>{{ c.nom_classe }}</strong></td>
+        <td><span class="badge badge-info">{{ c.niveau }}</span></td>
+        <td>{{ c.annee_scolaire }}</td>
+        {% if session.get('is_admin') %}
+        <td>
+          <a href="{{ url_for('classe_modifier', id_classe=c.id_classe) }}" class="btn btn-secondary btn-sm">Modifier</a>
+          <form method="POST" action="{{ url_for('classe_supprimer', id_classe=c.id_classe) }}" style="display:inline;" onsubmit="return confirm('Supprimer cette classe ?')">
+            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

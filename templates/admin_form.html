@@ -1,0 +1,31 @@
+﻿{% extends "base.html" %}
+{% block page_title %}Nouvel administrateur{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Creer un administrateur</h1>
+  <p>Le nouvel administrateur aura acces complet a la base de donnees</p>
+</div>
+<div class="form-card">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:24px; padding:14px; background:rgba(108,99,255,0.1); border:1px solid rgba(108,99,255,0.2); border-radius:10px;">
+    <span style="font-size:1.5rem;">🔐</span>
+    <div>
+      <div style="font-size:0.85rem; font-weight:600; color:var(--accent2);">Compte administrateur</div>
+      <div style="font-size:0.78rem; color:var(--text2);">Acces complet incluant la gestion des classes</div>
+    </div>
+  </div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  <form method="POST">
+    <label>Nom complet<input type="text" name="nom" placeholder="Ex: Jean Dupont" required></label>
+    <label>Adresse email<input type="email" name="email" placeholder="admin@ecole.com" required></label>
+    <label>Mot de passe<input type="password" name="mot_de_passe" placeholder="Minimum 6 caracteres" required></label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Creer l administrateur</button>
+      <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

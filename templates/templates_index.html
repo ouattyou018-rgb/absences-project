@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Tableau de bord - Absences scolaires</h1>
+
+<section>
+  <h2>Eleves a risque (plus de 3 absences par mois)</h2>
+  {% if a_risque %}
+  <table>
+    <thead>
+      <tr><th>Eleve</th><th>Classe</th><th>Mois</th><th>Absences</th></tr>
+    </thead>
+    <tbody>
+      {% for r in a_risque %}
+      <tr class="risque">
+        <td>{{ r.eleve }}</td>
+        <td>{{ r.nom_classe }}</td>
+        <td>{{ r.mois }}</td>
+        <td><strong>{{ r.nb }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Aucun eleve a risque ce mois-ci.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Absenteisme par classe</h2>
+  <canvas id="chartClasse" height="120"></canvas>
+</section>
+
+<section>
+  <h2>Tendance hebdomadaire des absences</h2>
+  <canvas id="chartTendance" height="120"></canvas>
+</section>
+
+<script>
+const classeLabels = {{ par_classe | map(attribute='nom_classe') | list | tojson }};
+const classeMoy    = {{ par_classe | map(attribute='moy')        | list | tojson }};
+
+new Chart(document.getElementById('chartClasse'), {
+  type: 'bar',
+  data: {
+    labels: classeLabels,
+    datasets: [{
+      label: 'Moy. absences par eleve',
+      data: classeMoy,
+      backgroundColor: 'rgba(54, 162, 235, 0.7)'
+    }]
+  },
+  options: { scales: { y: { beginAtZero: true } } }
+});
+
+const semaines = {{ tendance | map(attribute='semaine') | list | tojson }};
+const nbAbs    = {{ tendance | map(attribute='nb')      | list | tojson }};
+
+new Chart(document.getElementById('chartTendance'), {
+  type: 'line',
+  data: {
+    labels: semaines,
+    datasets: [{
+      label: 'Absences par semaine',
+      data: nbAbs,
+      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: 'rgba(255, 99, 132, 0.15)',
+      tension: 0.3,
+      fill: true
+    }]
+  },
+  options: { scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %}

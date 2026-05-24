@@ -1,0 +1,26 @@
+﻿{% extends "base.html" %}
+{% block page_title %}{{ "Modifier" if absence else "Nouvelle" }} absence{% endblock %}
+{% block content %}
+<div class="form-card">
+  <h2 style="margin-bottom:20px; font-size:1.1rem;">{{ "Modifier l absence" if absence else "Enregistrer une absence" }}</h2>
+  <form method="POST">
+    <label>Eleve
+      <select name="id_eleve" required>
+        {% for e in eleves %}
+        <option value="{{ e.id_eleve }}" {{ 'selected' if absence and absence.id_eleve == e.id_eleve }}>{{ e.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Date<input type="date" name="date_absence" required value="{{ absence.date_absence if absence else '' }}"></label>
+    <label>Motif (optionnel)<input type="text" name="motif" value="{{ absence.motif or '' if absence else '' }}"></label>
+    <label style="flex-direction:row; align-items:center; gap:10px;">
+      <input type="checkbox" name="justifiee" {{ 'checked' if absence and absence.justifiee }} style="width:auto;">
+      Absence justifiee
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <a href="{{ url_for('absences_liste') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
