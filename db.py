@@ -1,13 +1,26 @@
 ﻿import pg8000
+import os
 
 def get_connection():
-    return pg8000.connect(
-        host="localhost",
-        port=5432,
-        database="absences_db",
-        user="postgres",
-        password="MonMdp2024"
-    )
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        import urllib.parse
+        r = urllib.parse.urlparse(url)
+        return pg8000.connect(
+            host=r.hostname,
+            port=r.port or 5432,
+            database=r.path[1:],
+            user=r.username,
+            password=r.password
+        )
+    else:
+        return pg8000.connect(
+            host="localhost",
+            port=5432,
+            database="absences_db",
+            user="postgres",
+            password="MonMdp2024"
+        )
 
 def query(sql, params=None, fetchall=True):
     conn = get_connection()
