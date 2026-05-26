@@ -97,27 +97,52 @@ def get_donnees_dashboard():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+
     if request.method == "POST":
+
         email = request.form.get("email", "").strip().lower()
-        mdp   = request.form.get("mot_de_passe", "")
+        mdp = request.form.get("mot_de_passe", "")
+
+        # Vérifie si le compte est autorisé
         if email not in COMPTES_AUTORISES:
             flash("Acces refuse. Compte non autorise.", "danger")
             return render_template("login.html")
-        admin = db.query("SELECT * FROM admin WHERE LOWER(email) = %s AND actif = TRUE", (email,), fetchall=False)
+
+        # Recherche admin
+        admin = db.query(
+            "SELECT * FROM admin WHERE LOWER(email) = %s AND actif = TRUE",
+            (email,),
+            fetchall=False
+        )
+
         if admin:
+
             mdp_stocke = admin.get("mot_de_passe", "")
+
+            # Conversion sécurisée en bytes
             if isinstance(mdp_stocke, str):
                 mdp_stocke = mdp_stocke.encode("utf-8")
+
+            # Vérification du mot de passe
             if bcrypt.checkpw(mdp.encode("utf-8"), mdp_stocke):
-            session["logged_in"]   = True
-            session["admin_email"] = admin["email"]
-            session["admin_nom"]   = admin["nom"]
-            session["user_id"]     = admin["id_admin"]
-            session["is_admin"]    = True
-            flash("Bienvenue " + admin["nom"] + " !", "success")
-            return redirect(url_for("index"))
-        flash("Mot de passe incorrect.", "danger")
+
+                session["logged_in"] = True
+                session["admin_email"] = admin["email"]
+                session["admin_nom"] = admin["nom"]
+                session["user_id"] = admin["id_admin"]
+                session["is_admin"] = True
+
+                flash(f"Bienvenue {admin['nom']} !", "success")
+                return redirect(url_for("index"))
+
+            else:
+                flash("Mot de passe incorrect.", "danger")
+
+        else:
+            flash("Compte introuvable ou inactif.", "danger")
+
     return render_template("login.html")
+
 
 @app.route("/logout")
 def logout():
