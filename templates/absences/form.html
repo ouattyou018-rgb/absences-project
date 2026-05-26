@@ -1,26 +1,110 @@
 ﻿{% extends "base.html" %}
 {% block page_title %}{{ "Modifier" if absence else "Nouvelle" }} absence{% endblock %}
 {% block content %}
+<div class="page-header">
+  <h1>{{ "Modifier l absence" if absence else "Enregistrer une absence" }}</h1>
+</div>
 <div class="form-card">
-  <h2 style="margin-bottom:20px; font-size:1.1rem;">{{ "Modifier l absence" if absence else "Enregistrer une absence" }}</h2>
-  <form method="POST">
-    <label>Eleve
-      <select name="id_eleve" required>
-        {% for e in eleves %}
-        <option value="{{ e.id_eleve }}" {{ 'selected' if absence and absence.id_eleve == e.id_eleve }}>{{ e.label }}</option>
+  <form method="POST" action="">
+
+    <!-- ÉTAPE 1 : Choisir la classe -->
+    <label>
+      Etape 1 — Choisir la classe
+      <select name="classe_id" id="select-classe" onchange="filtrerEleves()" required>
+        <option value="">-- Selectionnez une classe --</option>
+        {% for c in classes %}
+        <option value="{{ c.id_classe }}"
+          {{ 'selected' if absence and absence.classe_id == c.id_classe }}>
+          {{ c.nom_classe }}
+        </option>
         {% endfor %}
       </select>
     </label>
-    <label>Date<input type="date" name="date_absence" required value="{{ absence.date_absence if absence else '' }}"></label>
-    <label>Motif (optionnel)<input type="text" name="motif" value="{{ absence.motif or '' if absence else '' }}"></label>
+
+    <!-- ÉTAPE 2 : Choisir l'élève (filtré par classe) -->
+    <label>
+      Etape 2 — Choisir l eleve
+      <select name="id_eleve" id="select-eleve" required>
+        <option value="">-- Selectionnez d abord une classe --</option>
+        {% for e in eleves %}
+        <option value="{{ e.id_eleve }}"
+                data-classe="{{ e.id_classe }}"
+                {{ 'selected' if absence and absence.id_eleve == e.id_eleve }}>
+          {{ e.nom }} {{ e.prenom }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <!-- ÉTAPE 3 : Date -->
+    <label>
+      Etape 3 — Date de l absence
+      <input type="date" name="date_absence" required
+             value="{{ absence.date_absence if absence else '' }}">
+    </label>
+
+    <!-- ÉTAPE 4 : Motif -->
+    <label>
+      Etape 4 — Motif (optionnel)
+      <input type="text" name="motif" placeholder="Ex: Maladie, Voyage..."
+             value="{{ absence.motif or '' if absence else '' }}">
+    </label>
+
+    <!-- ÉTAPE 5 : Justifiée -->
     <label style="flex-direction:row; align-items:center; gap:10px;">
-      <input type="checkbox" name="justifiee" {{ 'checked' if absence and absence.justifiee }} style="width:auto;">
+      <input type="checkbox" name="justifiee"
+             {{ 'checked' if absence and absence.justifiee }}
+             style="width:auto; accent-color:var(--accent);">
       Absence justifiee
     </label>
+
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Enregistrer</button>
       <a href="{{ url_for('absences_liste') }}" class="btn btn-secondary">Annuler</a>
     </div>
   </form>
 </div>
+
+<script>
+// Données de tous les élèves par classe
+const tousLesEleves = {};
+{% for e in eleves %}
+  if (!tousLesEleves[{{ e.id_classe }}]) tousLesEleves[{{ e.id_classe }}] = [];
+  tousLesEleves[{{ e.id_classe }}].push({
+    id: {{ e.id_eleve }},
+    nom: "{{ e.nom }} {{ e.prenom }}"
+  });
+{% endfor %}
+
+function filtrerEleves() {
+  const classeId  = parseInt(document.getElementById('select-classe').value);
+  const selectEl  = document.getElementById('select-eleve');
+  const elevesSel = tousLesEleves[classeId] || [];
+
+  selectEl.innerHTML = '<option value="">-- Selectionnez un eleve --</option>';
+
+  if (elevesSel.length === 0) {
+    selectEl.innerHTML = '<option value="">Aucun eleve dans cette classe</option>';
+    return;
+  }
+
+  elevesSel.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value       = e.id;
+    opt.textContent = e.nom;
+    selectEl.appendChild(opt);
+  });
+}
+
+// Au chargement, si on est en mode modification
+window.addEventListener('load', function() {
+  const classeSelect = document.getElementById('select-classe');
+  if (classeSelect.value) {
+    filtrerEleves();
+    {% if absence %}
+    document.getElementById('select-eleve').value = "{{ absence.id_eleve }}";
+    {% endif %}
+  }
+});
+</script>
 {% endblock %}

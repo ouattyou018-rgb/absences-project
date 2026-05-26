@@ -1,0 +1,31 @@
+﻿{% extends "base.html" %}
+{% block page_title %}{{ "Modifier" if classe else "Nouvelle" }} classe{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ "Modifier la classe" if classe else "Creer une classe" }}</h1>
+</div>
+<div class="form-card">
+  <form method="POST" action="">
+    <label>
+      Nom de la classe
+      <input type="text" name="nom_classe" required value="{{ classe.nom_classe if classe else '' }}" placeholder="Ex: 3eme A">
+    </label>
+    <label>
+      Niveau
+      <select name="niveau" required>
+        {% for n in ['Primaire', 'College', 'Lycee'] %}
+        <option value="{{ n }}" {{ 'selected' if classe and classe.niveau == n }}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Annee scolaire
+      <input type="text" name="annee_scolaire" value="{{ classe.annee_scolaire if classe else '2024-2025' }}">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <a href="{{ url_for('classes_liste') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

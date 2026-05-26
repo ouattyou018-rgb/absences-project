@@ -104,7 +104,11 @@ def login():
             flash("Acces refuse. Compte non autorise.", "danger")
             return render_template("login.html")
         admin = db.query("SELECT * FROM admin WHERE LOWER(email) = %s AND actif = TRUE", (email,), fetchall=False)
-        if admin and bcrypt.checkpw(mdp.encode("utf-8"), admin["mot_de_passe"].encode("utf-8")):
+        if admin:
+            mdp_stocke = admin.get("mot_de_passe", "")
+            if isinstance(mdp_stocke, str):
+                mdp_stocke = mdp_stocke.encode("utf-8")
+            if bcrypt.checkpw(mdp.encode("utf-8"), mdp_stocke):
             session["logged_in"]   = True
             session["admin_email"] = admin["email"]
             session["admin_nom"]   = admin["nom"]
@@ -149,7 +153,7 @@ def reinitialiser(email):
             return render_template("reinitialiser.html", email=email, nom=admin["nom"])
         hashed = bcrypt.hashpw(nouveau.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         db.execute("UPDATE admin SET mot_de_passe = %s WHERE LOWER(email) = %s", (hashed, email.lower()))
-        flash("Mot de passe modifie ! Connectez-vous.", "success")
+        flash("Mot de passe modifie !", "success")
         return redirect(url_for("login"))
     return render_template("reinitialiser.html", email=email, nom=admin["nom"])
 
@@ -166,6 +170,7 @@ def index():
         alertes.append({"type": "warning", "icon": "⚠️", "message": "Les absences non justifiees sont majoritaires."})
     return render_template("index.html", alertes=alertes, **donnees)
 
+# ── CLASSES ──
 @app.route("/classes")
 @login_required
 def classes_liste():
@@ -200,16 +205,68 @@ def classe_supprimer(id_classe):
     flash("Classe supprimee.", "warning")
     return redirect(url_for("classes_liste"))
 
+# ── ELEVES avec filtres ──
 @app.route("/eleves")
 @login_required
 def eleves_liste():
-    eleves = db.query("""
-        SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
-        FROM eleve e JOIN classe c ON e.id_classe = c.id_classe
-        LEFT JOIN absence a ON e.id_eleve = a.id_eleve
-        GROUP BY e.id_eleve, c.nom_classe ORDER BY e.nom, e.prenom
-    """)
-    return render_template("eleves/liste.html", eleves=eleves)
+    filtre_classe = request.args.get("classe_id", "")
+    filtre_date   = request.args.get("date_absence", "")
+
+    if filtre_classe and filtre_date:
+        eleves = db.query("""
+            SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
+            FROM eleve e
+            JOIN classe c ON e.id_classe = c.id_classe
+            LEFT JOIN absence a ON e.id_eleve = a.id_eleve
+            WHERE e.id_classe = %s
+            AND EXISTS (
+                SELECT 1 FROM absence a2
+                WHERE a2.id_eleve = e.id_eleve
+                AND a2.date_absence = %s
+            )
+            GROUP BY e.id_eleve, c.nom_classe
+            ORDER BY e.nom, e.prenom
+        """, (filtre_classe, filtre_date))
+    elif filtre_classe:
+        eleves = db.query("""
+            SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
+            FROM eleve e
+            JOIN classe c ON e.id_classe = c.id_classe
+            LEFT JOIN absence a ON e.id_eleve = a.id_eleve
+            WHERE e.id_classe = %s
+            GROUP BY e.id_eleve, c.nom_classe
+            ORDER BY e.nom, e.prenom
+        """, (filtre_classe,))
+    elif filtre_date:
+        eleves = db.query("""
+            SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
+            FROM eleve e
+            JOIN classe c ON e.id_classe = c.id_classe
+            LEFT JOIN absence a ON e.id_eleve = a.id_eleve
+            WHERE EXISTS (
+                SELECT 1 FROM absence a2
+                WHERE a2.id_eleve = e.id_eleve
+                AND a2.date_absence = %s
+            )
+            GROUP BY e.id_eleve, c.nom_classe
+            ORDER BY e.nom, e.prenom
+        """, (filtre_date,))
+    else:
+        eleves = db.query("""
+            SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
+            FROM eleve e
+            JOIN classe c ON e.id_classe = c.id_classe
+            LEFT JOIN absence a ON e.id_eleve = a.id_eleve
+            GROUP BY e.id_eleve, c.nom_classe
+            ORDER BY e.nom, e.prenom
+        """)
+
+    classes = db.query("SELECT * FROM classe ORDER BY nom_classe")
+    return render_template("eleves/liste.html",
+                           eleves=eleves,
+                           classes=classes,
+                           filtre_classe=filtre_classe,
+                           filtre_date=filtre_date)
 
 @app.route("/eleves/nouveau", methods=["GET", "POST"])
 @login_required
@@ -241,6 +298,7 @@ def eleve_supprimer(id_eleve):
     flash("Eleve supprime.", "warning")
     return redirect(url_for("eleves_liste"))
 
+# ── ABSENCES ──
 @app.route("/absences")
 @login_required
 def absences_liste():
@@ -255,31 +313,39 @@ def absences_liste():
 @app.route("/absences/nouveau", methods=["GET", "POST"])
 @login_required
 def absence_nouveau():
-    eleves = db.query("""
-        SELECT e.id_eleve, e.nom || ' ' || e.prenom || ' (' || c.nom_classe || ')' AS label
-        FROM eleve e JOIN classe c ON e.id_classe = c.id_classe ORDER BY e.nom
+    classes = db.query("SELECT * FROM classe ORDER BY nom_classe")
+    eleves  = db.query("""
+        SELECT e.id_eleve, e.nom, e.prenom, e.id_classe
+        FROM eleve e ORDER BY e.nom, e.prenom
     """)
     if request.method == "POST":
         db.execute("INSERT INTO absence (id_eleve, date_absence, motif, justifiee) VALUES (%s, %s, %s, %s)",
             (request.form["id_eleve"], request.form["date_absence"], request.form.get("motif") or None, "justifiee" in request.form))
         flash("Absence enregistree.", "success")
         return redirect(url_for("absences_liste"))
-    return render_template("absences/form.html", absence=None, eleves=eleves)
+    return render_template("absences/form.html", absence=None, classes=classes, eleves=eleves)
 
 @app.route("/absences/<int:id_absence>/modifier", methods=["GET", "POST"])
 @login_required
 def absence_modifier(id_absence):
     absence = db.query("SELECT * FROM absence WHERE id_absence = %s", (id_absence,), fetchall=False)
+    classes = db.query("SELECT * FROM classe ORDER BY nom_classe")
     eleves  = db.query("""
-        SELECT e.id_eleve, e.nom || ' ' || e.prenom || ' (' || c.nom_classe || ')' AS label
-        FROM eleve e JOIN classe c ON e.id_classe = c.id_classe ORDER BY e.nom
+        SELECT e.id_eleve, e.nom, e.prenom, e.id_classe
+        FROM eleve e ORDER BY e.nom, e.prenom
     """)
+    # Ajouter l id_classe de l eleve dans absence pour pre-selection
+    if absence:
+        eleve_info = db.query("SELECT id_classe FROM eleve WHERE id_eleve = %s", (absence["id_eleve"],), fetchall=False)
+        if eleve_info:
+            absence = dict(absence)
+            absence["classe_id"] = eleve_info["id_classe"]
     if request.method == "POST":
         db.execute("UPDATE absence SET id_eleve=%s, date_absence=%s, motif=%s, justifiee=%s WHERE id_absence=%s",
             (request.form["id_eleve"], request.form["date_absence"], request.form.get("motif") or None, "justifiee" in request.form, id_absence))
         flash("Absence mise a jour.", "success")
         return redirect(url_for("absences_liste"))
-    return render_template("absences/form.html", absence=absence, eleves=eleves)
+    return render_template("absences/form.html", absence=absence, classes=classes, eleves=eleves)
 
 @app.route("/absences/<int:id_absence>/supprimer", methods=["POST"])
 @login_required
@@ -288,139 +354,25 @@ def absence_supprimer(id_absence):
     flash("Absence supprimee.", "warning")
     return redirect(url_for("absences_liste"))
 
+# ── ADMIN ──
 @app.route("/admin")
 @login_required
 def admin_panel():
     admins = db.query("SELECT * FROM admin ORDER BY date_creation DESC")
     return render_template("admin.html", admins=admins)
 
-# ── CHATBOT ──
+# ── PREDICTIONS ──
 @app.route("/predictions")
 @login_required
 def predictions_page():
     return render_template("predictions.html")
 
-@app.route("/api/chat", methods=["POST"])
-@login_required
-def api_chat():
-    question = request.json.get("question", "").strip().lower()
-    donnees  = get_donnees_dashboard()
-    reponse  = repondre_chatbot(question, donnees)
-    return jsonify({"reponse": reponse})
-
 @app.route("/api/predictions", methods=["GET"])
 @login_required
 def api_predictions():
-    donnees      = get_donnees_dashboard()
-    predictions  = ml.predire_absences(donnees["par_mois"], donnees["par_classe"])
+    donnees     = get_donnees_dashboard()
+    predictions = ml.predire_absences(donnees["par_mois"], donnees["par_classe"])
     return jsonify({"predictions": predictions})
-
-def repondre_chatbot(question, d):
-    total_eleves   = d.get("total_eleves", 0)
-    total_absences = d.get("total_absences", 0)
-    taux           = d.get("taux_global", 0)
-    justif         = d.get("justif", {})
-    justifiees     = justif.get("justifiees", 0) or 0
-    non_justifiees = justif.get("non_justifiees", 0) or 0
-    par_classe     = d.get("par_classe", [])
-    a_risque       = d.get("a_risque", [])
-    top_absents    = d.get("top_absents", [])
-    par_jour       = d.get("par_jour", [])
-
-    # Total absences
-    if any(m in question for m in ["total absence", "combien absence", "nombre absence"]):
-        return f"Il y a au total {total_absences} absences enregistrees cette annee scolaire, dont {justifiees} justifiees et {non_justifiees} non justifiees."
-
-    # Total eleves
-    if any(m in question for m in ["total eleve", "combien eleve", "nombre eleve"]):
-        return f"L etablissement compte {total_eleves} eleves au total."
-
-    # Taux moyen
-    if any(m in question for m in ["taux", "moyenne", "moy"]):
-        return f"Le taux moyen d absenteisme est de {taux} absences par eleve. " + (
-            "C est un taux eleve qui necessite une attention particuliere." if float(str(taux)) > 3
-            else "C est un taux acceptable."
-        )
-
-    # Justifiees vs non justifiees
-    if any(m in question for m in ["justif", "non justif"]):
-        total = (justifiees or 0) + (non_justifiees or 0)
-        pct_j  = round((justifiees / total * 100), 1) if total > 0 else 0
-        pct_nj = round((non_justifiees / total * 100), 1) if total > 0 else 0
-        return f"Sur {total} absences : {justifiees} sont justifiees ({pct_j}%) et {non_justifiees} sont non justifiees ({pct_nj}%)."
-
-    # Eleves a risque
-    if any(m in question for m in ["risque", "alerte", "danger"]):
-        if not a_risque:
-            return "Aucun eleve n est actuellement en situation de risque (plus de 3 absences par mois)."
-        noms = ", ".join([r["eleve"] for r in a_risque[:5]])
-        return f"{len(a_risque)} eleve(s) sont a risque (plus de 3 absences/mois) : {noms}."
-
-    # Par classe
-    if any(m in question for m in ["classe", "3eme", "terminale", "seconde"]):
-        if not par_classe:
-            return "Aucune donnee de classe disponible."
-        rep = "Voici l absenteisme par classe :\n"
-        for c in par_classe:
-            rep += f"- {c['nom_classe']} : {c['total_absences']} absences, moyenne {c['moy']} par eleve\n"
-        return rep.strip()
-
-    # Classe la plus problematique
-    if any(m in question for m in ["plus problematique", "pire", "plus d absence", "plus absent"]):
-        if par_classe:
-            pire = par_classe[0]
-            return f"La classe la plus problematique est {pire['nom_classe']} avec {pire['total_absences']} absences et une moyenne de {pire['moy']} par eleve."
-        return "Aucune donnee disponible."
-
-    # Top absents
-    if any(m in question for m in ["top", "plus absent", "classement", "eleve absent"]):
-        if not top_absents:
-            return "Aucune donnee sur les eleves absents."
-        rep = "Top 5 des eleves les plus absents :\n"
-        for i, e in enumerate(top_absents, 1):
-            rep += f"{i}. {e['eleve']} ({e['nom_classe']}) : {e['total']} absences\n"
-        return rep.strip()
-
-    # Jour critique
-    if any(m in question for m in ["jour", "lundi", "mardi", "mercredi", "jeudi", "vendredi"]):
-        if par_jour:
-            jour_max = max(par_jour, key=lambda x: x["nb"])
-            return f"Le jour avec le plus d absences est le {jour_max['jour'].strip()} avec {jour_max['nb']} absences enregistrees."
-        return "Aucune donnee par jour disponible."
-
-    # Predictions
-    if any(m in question for m in ["predict", "futur", "prochaine", "semaine prochaine", "prevision"]):
-        predictions = ml.predire_absences(d.get("par_mois", []), par_classe)
-        if not predictions:
-            return "Impossible de faire des predictions avec les donnees actuelles."
-        rep = "Predictions pour les prochaines semaines :\n"
-        for p in predictions[:3]:
-            rep += f"- {p['classe']} : tendance {p['tendance']}, {p['recommandation']}\n"
-        return rep.strip()
-
-    # Resume global
-    if any(m in question for m in ["resume", "situation", "bilan", "general"]):
-        classe_critique = par_classe[0]["nom_classe"] if par_classe else "N/A"
-        return (
-            f"Bilan general : {total_eleves} eleves, {total_absences} absences "
-            f"(moy. {taux}/eleve). {len(a_risque)} eleve(s) a risque. "
-            f"Classe la plus touchee : {classe_critique}. "
-            f"Absences non justifiees : {non_justifiees} sur {(justifiees or 0)+(non_justifiees or 0)}."
-        )
-
-    # Aide
-    return (
-        "Je peux repondre a vos questions sur :\n"
-        "- Le total des absences et des eleves\n"
-        "- Le taux moyen d absenteisme\n"
-        "- Les absences justifiees vs non justifiees\n"
-        "- Les eleves a risque\n"
-        "- L absenteisme par classe\n"
-        "- Le jour le plus critique\n"
-        "- Le classement des eleves les plus absents\n"
-        "- Les predictions pour les semaines a venir\n"
-        "Posez votre question !"
-    )
 
 if __name__ == "__main__":
     app.run(debug=True)

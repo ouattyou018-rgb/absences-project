@@ -33,10 +33,6 @@
       <a href="{{ url_for('absences_liste') }}" class="nav-item {{ 'active' if 'absence' in request.endpoint }}">
         <span class="nav-icon">📋</span> Absences
       </a>
-      <div class="nav-section-label">Machine Learning</div>
-      <a href="{{ url_for('predictions_page') }}" class="nav-item {{ 'active' if request.endpoint == 'predictions_page' }}">
-        <span class="nav-icon">🔮</span> Predictions ML
-      </a>
       <div class="nav-section-label">Administration</div>
       <a href="{{ url_for('admin_panel') }}" class="nav-item {{ 'active' if request.endpoint == 'admin_panel' }}">
         <span class="nav-icon">🔐</span> Panneau Admin

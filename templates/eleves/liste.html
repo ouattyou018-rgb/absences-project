@@ -4,12 +4,54 @@
   <a href="{{ url_for('eleve_nouveau') }}" class="btn btn-primary">+ Nouvel eleve</a>
 {% endblock %}
 {% block content %}
+<div class="page-header">
+  <h1>Eleves</h1>
+  <p>Liste de tous les eleves de l etablissement</p>
+</div>
+
+<!-- FILTRES -->
+<div class="card" style="margin-bottom:20px;">
+  <form method="GET" action="{{ url_for('eleves_liste') }}">
+    <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:16px; align-items:end;">
+      <label style="margin-bottom:0;">
+        Filtrer par classe
+        <select name="classe_id">
+          <option value="">Toutes les classes</option>
+          {% for c in classes %}
+          <option value="{{ c.id_classe }}" {{ 'selected' if filtre_classe == c.id_classe|string }}>{{ c.nom_classe }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label style="margin-bottom:0;">
+        Filtrer par date d absence
+        <input type="date" name="date_absence" value="{{ filtre_date or '' }}">
+      </label>
+      <div style="display:flex; gap:8px;">
+        <button type="submit" class="btn btn-primary">Filtrer</button>
+        <a href="{{ url_for('eleves_liste') }}" class="btn btn-secondary">Réinitialiser</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- RÉSULTAT DU FILTRE -->
+{% if filtre_classe or filtre_date %}
+<div style="margin-bottom:16px; font-size:0.85rem; color:var(--text2);">
+  {{ eleves|length }} eleve(s) trouve(s)
+  {% if filtre_classe %} · Classe filtrée{% endif %}
+  {% if filtre_date %} · Date : {{ filtre_date }}{% endif %}
+</div>
+{% endif %}
+
 <div class="table-wrapper">
   <div class="table-header">
     <div class="table-header-title">Tous les eleves</div>
+    <span class="badge badge-info">{{ eleves|length }} eleve(s)</span>
   </div>
   <table>
-    <thead><tr><th>Eleve</th><th>Classe</th><th>Absences</th><th>Statut</th><th>Actions</th></tr></thead>
+    <thead>
+      <tr><th>Eleve</th><th>Classe</th><th>Total absences</th><th>Statut</th><th>Actions</th></tr>
+    </thead>
     <tbody>
       {% for e in eleves %}
       <tr>
@@ -32,11 +74,13 @@
         </td>
         <td>
           <a href="{{ url_for('eleve_modifier', id_eleve=e.id_eleve) }}" class="btn btn-secondary btn-sm">Modifier</a>
-          <form method="POST" action="{{ url_for('eleve_supprimer', id_eleve=e.id_eleve) }}" style="display:inline" onsubmit="return confirm('Supprimer cet eleve ?')">
+          <form method="POST" action="{{ url_for('eleve_supprimer', id_eleve=e.id_eleve) }}" style="display:inline;" onsubmit="return confirm('Supprimer cet eleve ?')">
             <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
           </form>
         </td>
       </tr>
+      {% else %}
+      <tr><td colspan="5" style="text-align:center; color:var(--text2); padding:40px;">Aucun eleve trouve.</td></tr>
       {% endfor %}
     </tbody>
   </table>
