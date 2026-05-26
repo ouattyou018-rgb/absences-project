@@ -5,7 +5,7 @@ import db, bcrypt, ml
 
 app = Flask(__name__)
 app.secret_key = "absencetrack_secret_2024"
-app.jinja_env.globals['enumerate'] = enumerate
+app.jinja_env.globals["enumerate"] = enumerate
 
 COMPTES_AUTORISES = ["ouattyou018@gmail.com", "arzikamohamed@gmail.com"]
 
@@ -36,7 +36,8 @@ def get_donnees_dashboard():
         FROM absence a
         JOIN eleve e ON a.id_eleve = e.id_eleve
         JOIN classe c ON e.id_classe = c.id_classe
-        GROUP BY e.id_eleve, e.nom, e.prenom, c.nom_classe, TO_CHAR(a.date_absence, 'YYYY-MM')
+        GROUP BY e.id_eleve, e.nom, e.prenom, c.nom_classe,
+                 TO_CHAR(a.date_absence, 'YYYY-MM')
         HAVING COUNT(*) > 3 ORDER BY nb DESC
     """)
     top_absents = db.query("""
@@ -97,52 +98,23 @@ def get_donnees_dashboard():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "POST":
-
         email = request.form.get("email", "").strip().lower()
-        mdp = request.form.get("mot_de_passe", "")
-
-        # Vérifie si le compte est autorisé
+        mdp   = request.form.get("mot_de_passe", "")
         if email not in COMPTES_AUTORISES:
             flash("Acces refuse. Compte non autorise.", "danger")
             return render_template("login.html")
-
-        # Recherche admin
-        admin = db.query(
-            "SELECT * FROM admin WHERE LOWER(email) = %s AND actif = TRUE",
-            (email,),
-            fetchall=False
-        )
-
-        if admin:
-
-            mdp_stocke = admin.get("mot_de_passe", "")
-
-            # Conversion sécurisée en bytes
-            if isinstance(mdp_stocke, str):
-                mdp_stocke = mdp_stocke.encode("utf-8")
-
-            # Vérification du mot de passe
-            if bcrypt.checkpw(mdp.encode("utf-8"), mdp_stocke):
-
-                session["logged_in"] = True
-                session["admin_email"] = admin["email"]
-                session["admin_nom"] = admin["nom"]
-                session["user_id"] = admin["id_admin"]
-                session["is_admin"] = True
-
-                flash(f"Bienvenue {admin['nom']} !", "success")
-                return redirect(url_for("index"))
-
-            else:
-                flash("Mot de passe incorrect.", "danger")
-
-        else:
-            flash("Compte introuvable ou inactif.", "danger")
-
+        admin = db.query("SELECT * FROM admin WHERE LOWER(email) = %s AND actif = TRUE", (email,), fetchall=False)
+        if admin and bcrypt.checkpw(mdp.encode("utf-8"), admin["mot_de_passe"].encode("utf-8")):
+            session["logged_in"]   = True
+            session["admin_email"] = admin["email"]
+            session["admin_nom"]   = admin["nom"]
+            session["user_id"]     = admin["id_admin"]
+            session["is_admin"]    = True
+            flash("Bienvenue " + admin["nom"] + " !", "success")
+            return redirect(url_for("index"))
+        flash("Mot de passe incorrect.", "danger")
     return render_template("login.html")
-
 
 @app.route("/logout")
 def logout():
@@ -195,7 +167,6 @@ def index():
         alertes.append({"type": "warning", "icon": "⚠️", "message": "Les absences non justifiees sont majoritaires."})
     return render_template("index.html", alertes=alertes, **donnees)
 
-# ── CLASSES ──
 @app.route("/classes")
 @login_required
 def classes_liste():
@@ -230,68 +201,46 @@ def classe_supprimer(id_classe):
     flash("Classe supprimee.", "warning")
     return redirect(url_for("classes_liste"))
 
-# ── ELEVES avec filtres ──
 @app.route("/eleves")
 @login_required
 def eleves_liste():
     filtre_classe = request.args.get("classe_id", "")
     filtre_date   = request.args.get("date_absence", "")
-
     if filtre_classe and filtre_date:
         eleves = db.query("""
             SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
-            FROM eleve e
-            JOIN classe c ON e.id_classe = c.id_classe
+            FROM eleve e JOIN classe c ON e.id_classe = c.id_classe
             LEFT JOIN absence a ON e.id_eleve = a.id_eleve
             WHERE e.id_classe = %s
-            AND EXISTS (
-                SELECT 1 FROM absence a2
-                WHERE a2.id_eleve = e.id_eleve
-                AND a2.date_absence = %s
-            )
-            GROUP BY e.id_eleve, c.nom_classe
-            ORDER BY e.nom, e.prenom
+            AND EXISTS (SELECT 1 FROM absence a2 WHERE a2.id_eleve = e.id_eleve AND a2.date_absence = %s)
+            GROUP BY e.id_eleve, c.nom_classe ORDER BY e.nom, e.prenom
         """, (filtre_classe, filtre_date))
     elif filtre_classe:
         eleves = db.query("""
             SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
-            FROM eleve e
-            JOIN classe c ON e.id_classe = c.id_classe
+            FROM eleve e JOIN classe c ON e.id_classe = c.id_classe
             LEFT JOIN absence a ON e.id_eleve = a.id_eleve
             WHERE e.id_classe = %s
-            GROUP BY e.id_eleve, c.nom_classe
-            ORDER BY e.nom, e.prenom
+            GROUP BY e.id_eleve, c.nom_classe ORDER BY e.nom, e.prenom
         """, (filtre_classe,))
     elif filtre_date:
         eleves = db.query("""
             SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
-            FROM eleve e
-            JOIN classe c ON e.id_classe = c.id_classe
+            FROM eleve e JOIN classe c ON e.id_classe = c.id_classe
             LEFT JOIN absence a ON e.id_eleve = a.id_eleve
-            WHERE EXISTS (
-                SELECT 1 FROM absence a2
-                WHERE a2.id_eleve = e.id_eleve
-                AND a2.date_absence = %s
-            )
-            GROUP BY e.id_eleve, c.nom_classe
-            ORDER BY e.nom, e.prenom
+            WHERE EXISTS (SELECT 1 FROM absence a2 WHERE a2.id_eleve = e.id_eleve AND a2.date_absence = %s)
+            GROUP BY e.id_eleve, c.nom_classe ORDER BY e.nom, e.prenom
         """, (filtre_date,))
     else:
         eleves = db.query("""
             SELECT e.*, c.nom_classe, COUNT(a.id_absence) AS total_absences
-            FROM eleve e
-            JOIN classe c ON e.id_classe = c.id_classe
+            FROM eleve e JOIN classe c ON e.id_classe = c.id_classe
             LEFT JOIN absence a ON e.id_eleve = a.id_eleve
-            GROUP BY e.id_eleve, c.nom_classe
-            ORDER BY e.nom, e.prenom
+            GROUP BY e.id_eleve, c.nom_classe ORDER BY e.nom, e.prenom
         """)
-
     classes = db.query("SELECT * FROM classe ORDER BY nom_classe")
-    return render_template("eleves/liste.html",
-                           eleves=eleves,
-                           classes=classes,
-                           filtre_classe=filtre_classe,
-                           filtre_date=filtre_date)
+    return render_template("eleves/liste.html", eleves=eleves, classes=classes,
+                           filtre_classe=filtre_classe, filtre_date=filtre_date)
 
 @app.route("/eleves/nouveau", methods=["GET", "POST"])
 @login_required
@@ -323,7 +272,6 @@ def eleve_supprimer(id_eleve):
     flash("Eleve supprime.", "warning")
     return redirect(url_for("eleves_liste"))
 
-# ── ABSENCES ──
 @app.route("/absences")
 @login_required
 def absences_liste():
@@ -339,10 +287,7 @@ def absences_liste():
 @login_required
 def absence_nouveau():
     classes = db.query("SELECT * FROM classe ORDER BY nom_classe")
-    eleves  = db.query("""
-        SELECT e.id_eleve, e.nom, e.prenom, e.id_classe
-        FROM eleve e ORDER BY e.nom, e.prenom
-    """)
+    eleves  = db.query("SELECT e.id_eleve, e.nom, e.prenom, e.id_classe FROM eleve e ORDER BY e.nom, e.prenom")
     if request.method == "POST":
         db.execute("INSERT INTO absence (id_eleve, date_absence, motif, justifiee) VALUES (%s, %s, %s, %s)",
             (request.form["id_eleve"], request.form["date_absence"], request.form.get("motif") or None, "justifiee" in request.form))
@@ -355,11 +300,7 @@ def absence_nouveau():
 def absence_modifier(id_absence):
     absence = db.query("SELECT * FROM absence WHERE id_absence = %s", (id_absence,), fetchall=False)
     classes = db.query("SELECT * FROM classe ORDER BY nom_classe")
-    eleves  = db.query("""
-        SELECT e.id_eleve, e.nom, e.prenom, e.id_classe
-        FROM eleve e ORDER BY e.nom, e.prenom
-    """)
-    # Ajouter l id_classe de l eleve dans absence pour pre-selection
+    eleves  = db.query("SELECT e.id_eleve, e.nom, e.prenom, e.id_classe FROM eleve e ORDER BY e.nom, e.prenom")
     if absence:
         eleve_info = db.query("SELECT id_classe FROM eleve WHERE id_eleve = %s", (absence["id_eleve"],), fetchall=False)
         if eleve_info:
@@ -379,26 +320,11 @@ def absence_supprimer(id_absence):
     flash("Absence supprimee.", "warning")
     return redirect(url_for("absences_liste"))
 
-# ── ADMIN ──
 @app.route("/admin")
 @login_required
 def admin_panel():
     admins = db.query("SELECT * FROM admin ORDER BY date_creation DESC")
     return render_template("admin.html", admins=admins)
 
-# ── PREDICTIONS ──
-@app.route("/predictions")
-@login_required
-def predictions_page():
-    return render_template("predictions.html")
-
-@app.route("/api/predictions", methods=["GET"])
-@login_required
-def api_predictions():
-    donnees     = get_donnees_dashboard()
-    predictions = ml.predire_absences(donnees["par_mois"], donnees["par_classe"])
-    return jsonify({"predictions": predictions})
-
 if __name__ == "__main__":
     app.run(debug=True)
-
